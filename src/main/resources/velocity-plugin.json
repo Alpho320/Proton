@@ -1,0 +1,17 @@
+{
+  "id": "proton",
+  "name": "proton",
+  "version": "${version}",
+  "description": "proton",
+  "authors": [
+    "Drepic",
+    "Alpho320"
+  ],
+  "dependencies": [
+    {
+      "id": "luckperms",
+      "optional": true
+    }
+  ],
+  "main": "me.drepic.proton.velocity.VelocityBootstrap"
+}
