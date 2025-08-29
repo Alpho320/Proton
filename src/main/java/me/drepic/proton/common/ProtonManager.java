@@ -250,7 +250,7 @@ public abstract class ProtonManager {
 
         Class<?> type = this.contextClassMap.get(context);
         try {
-            getLogger().info("ProtonManager#notifyHandlers | Recipient: " + recipient + ", Sender: " + senderName + ", SenderID: " + senderID + ", Context: " + context.toContextString() + ", Data: " + jsonData);
+            //getLogger().info("ProtonManager#notifyHandlers | Recipient: " + recipient + ", Sender: " + senderName + ", SenderID: " + senderID + ", Context: " + context.toContextString() + ", Data: " + jsonData);
             Object body = gson.fromJson(jsonData, type);
             MessageAttributes messageAttributes = new MessageAttributes(context.getNamespace(), context.getSubject(), senderName, senderID);
             this.messageHandlers.get(context).forEach((biConsumer) -> {
