@@ -132,21 +132,23 @@ public abstract class ProtonManager {
      * @see ProtonManager#send
      */
     public void broadcast(String namespace, String subject, Object data) {
-        if (namespace.contains("\\.") || subject.contains("\\.")) {
-            throw new IllegalArgumentException("MessageContext cannot contain `.`");
-        }
-        MessageContext context = new MessageContext(namespace, subject);
-        if (this.contextClassMap.containsKey(context) &&
-                !data.getClass().equals(this.contextClassMap.get(context))) {
-            throw new IllegalArgumentException("Trying to send the wrong datatype for an already defined MessageContext");
-        }
+        getScheduler().runTaskAsynchronously(() -> {
+            if (namespace.contains("\\.") || subject.contains("\\.")) {
+                throw new IllegalArgumentException("MessageContext cannot contain `.`");
+            }
+            MessageContext context = new MessageContext(namespace, subject);
+            if (this.contextClassMap.containsKey(context) &&
+                    !data.getClass().equals(this.contextClassMap.get(context))) {
+                throw new IllegalArgumentException("Trying to send the wrong datatype for an already defined MessageContext");
+            }
 
-        try {
-            byte[] bytes = gson.toJson(data).getBytes(StandardCharsets.UTF_8);
-            this.broadcastData(this.name, this.id, context, bytes);
-        } catch (Exception e) {
-            throw new MessageSendException(e);
-        }
+            try {
+                byte[] bytes = gson.toJson(data).getBytes(StandardCharsets.UTF_8);
+                this.broadcastData(this.name, this.id, context, bytes);
+            } catch (Exception e) {
+                throw new MessageSendException(e);
+            }
+        });
     }
 
     /**
