@@ -3,3 +3,5 @@ version: ${version}
 main: me.drepic.proton.bukkit.BukkitBootstrap
 folia-supported: true
 api-version: 1.13
+loadbefore:
+  - Vault
