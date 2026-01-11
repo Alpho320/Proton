@@ -11,13 +11,17 @@ import me.drepic.proton.common.exception.RegisterMessageHandlerException;
 import me.drepic.proton.common.message.MessageAttributes;
 import me.drepic.proton.common.message.MessageContext;
 import me.drepic.proton.common.message.MessageHandler;
-import org.bukkit.plugin.Plugin;
+import me.drepic.proton.common.util.NamedThreadFactory;
 
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 import java.util.logging.Logger;
 
@@ -40,6 +44,15 @@ public abstract class ProtonManager {
 
     protected final SchedulerAdapter scheduler;
     protected final Logger logger;
+
+    private static final ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(
+            4,
+            5,
+            60L, TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(256),
+            new NamedThreadFactory("proton-pool"),
+            new ThreadPoolExecutor.DiscardPolicy()
+    );
 
     protected ProtonManager(SchedulerAdapter scheduler, Logger logger, String name, String[] groups){
         this.scheduler = scheduler;
@@ -132,7 +145,7 @@ public abstract class ProtonManager {
      * @see ProtonManager#send
      */
     public void broadcast(String namespace, String subject, Object data) {
-        getScheduler().runTaskAsynchronously(() -> {
+        CompletableFuture.runAsync(() -> {
             if (namespace.contains("\\.") || subject.contains("\\.")) {
                 throw new IllegalArgumentException("MessageContext cannot contain `.`");
             }
@@ -148,7 +161,7 @@ public abstract class ProtonManager {
             } catch (Exception e) {
                 throw new MessageSendException(e);
             }
-        });
+        }, EXECUTOR);
     }
 
     /**
@@ -211,9 +224,9 @@ public abstract class ProtonManager {
                     };
                 } else {
                     wrappedBiConsumer = (data, messageAttributes) -> { //prevent RabbitMQ thread stealing
-                        getScheduler().runTaskAsynchronously(() -> {
+                        CompletableFuture.runAsync(() -> {
                             biConsumer.accept(data, messageAttributes);
-                        });
+                        }, EXECUTOR);
                     };
                 }
 
