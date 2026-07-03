@@ -2,6 +2,7 @@ package me.drepic.proton.common;
 
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
+import io.lettuce.core.resource.ClientResources;
 import io.lettuce.core.pubsub.RedisPubSubAdapter;
 import io.lettuce.core.pubsub.RedisPubSubListener;
 import io.lettuce.core.pubsub.StatefulRedisPubSubConnection;
@@ -21,6 +22,7 @@ public class RedisManager extends ProtonManager {
     String password;
     int port;
 
+    ClientResources clientResources;
     RedisClient client;
     RedisPubSubCommands<String, String> subCommands;
     RedisPubSubCommands<String, String> pubCommands;
@@ -49,10 +51,17 @@ public class RedisManager extends ProtonManager {
 
     @Override
     protected void connect() {
+        // Pub/sub over two connections needs far fewer threads than lettuce's
+        // default of max(2, availableProcessors) per pool
+        this.clientResources = ClientResources.builder()
+                .ioThreadPoolSize(2)
+                .computationThreadPoolSize(2)
+                .build();
+
         if (this.password.isEmpty()) {
-            this.client = RedisClient.create(RedisURI.Builder.redis(this.host, this.port).build());
+            this.client = RedisClient.create(this.clientResources, RedisURI.Builder.redis(this.host, this.port).build());
         } else {
-            this.client = RedisClient.create(RedisURI.Builder.redis(this.host, this.port).withPassword(this.password.toCharArray()).build());
+            this.client = RedisClient.create(this.clientResources, RedisURI.Builder.redis(this.host, this.port).withPassword(this.password.toCharArray()).build());
         }
 
         subConnection = client.connectPubSub();
@@ -123,6 +132,8 @@ public class RedisManager extends ProtonManager {
         pubConnection.close();
         subConnection.close();
         client.shutdown();
+        // Externally-provided ClientResources are not shut down by client.shutdown()
+        clientResources.shutdown();
     }
 
 }
